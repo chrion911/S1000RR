@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>S1000RR Simulator V24 - Instant Start</title>
+    <style>
+        body { margin: 0; overflow: hidden; background-color: #000; color: white; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; user-select: none; -webkit-user-select: none; }
+        #game-container { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+        
+        #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
+        
+        .control-group { pointer-events: auto; position: absolute; display: flex; flex-direction: column; gap: 12px; }
+        
+        #left-controls { bottom: 25px; left: 25px; align-items: flex-start; }
+        #right-controls { bottom: 25px; right: 25px; align-items: flex-end; }
+
+        button {
+            background: rgba(20, 20, 20, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: #eee;
+            padding: 0;
+            border-radius: 12px;
+            width: 85px;
+            height: 65px;
+            font-weight: 700;
+            font-size: 13px;
+            touch-action: manipulation;
+            backdrop-filter: blur(8px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            transition: transform 0.1s, background 0.1s;
+        }
+        button:active { background: rgba(50, 50, 50, 0.8); transform: scale(0.95); }
+        
+        .brake-btn { background: rgba(100, 0, 0, 0.4); border-color: #ff4444; height: 80px; }
+        .clutch-btn { background: rgba(0, 50, 100, 0.4); border-color: #00ccff; width: 70px; height: 70px; border-radius: 50%; font-size: 11px; margin-top: 10px;}
+
+        #top-center-ui {
+            position: absolute; top: 15px; left: 50%; transform: translateX(-50%);
+            pointer-events: auto; z-index: 50;
+            display: flex; gap: 10px;
+        }
+        .icon-btn { width: 50px; height: 50px; border-radius: 50%; font-size: 20px; border: 2px solid rgba(255,255,255,0.3); background: rgba(0,0,0,0.5); color: white;}
+
+        #dist-counter {
+            position: absolute; top: 20px; left: 20px;
+            background: rgba(0,0,0,0.6); padding: 10px 20px; border-radius: 20px;
+            font-family: monospace; font-size: 18px; color: #0ff; border: 1px solid #0ff;
+            text-shadow: 0 0 5px #0ff;
+        }
+
+        #throttle-container {
+            width: 70px;
+            height: 240px;
+            background: rgba(10,10,10,0.8);
+            border: 2px solid #444;
+            border-radius: 35px;
+            position: relative;
+            margin-bottom: 15px;
+            pointer-events: auto;
+            overflow: hidden;
+        }
+        #throttle-fill {
+            position: absolute; bottom: 0; left: 0; width: 100%; height: 0%;
+            background: linear-gradient(to top, #2ecc71, #f1c40f, #e74c3c);
+            transition: height 0.05s; opacity: 0.8;
+        }
+        #throttle-handle {
+            position: absolute; bottom: 0%; left: 0; width: 100%; height: 20px;
+            background: #fff; transform: translateY(10px);
+            box-shadow: 0 -2px 5px rgba(0,0,0,0.5);
+            z-index: 2;
+        }
+        #throttle-label {
+            position: absolute; bottom: 10px; width: 100%; text-align: center;
+            font-size: 10px; pointer-events: none; font-weight: bold; color: #aaa; z-index: 3;
+        }
+
+        #steer-left { position: absolute; top: 0; left: 0; width: 40%; height: 70%; pointer-events: auto; }
+        #steer-right { position: absolute; top: 0; right: 0; width: 40%; height: 70%; pointer-events: auto; }
+
+        /* Game Over Screen (Hidden by default) */
+        #game-over-screen {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(10, 0, 0, 0.8); display: none;
+            flex-direction: column; justify-content: center; align-items: center;
+            pointer-events: auto; z-index: 200; text-align: center;
+        }
+        h1 { color: #e74c3c; margin: 0 0 10px 0; font-size: 50px; font-weight: bold; text-shadow: 0 0 20px red; }
+        #final-score { font-size: 24px; color: #fff; margin-bottom: 20px; font-family: monospace; }
+        #restart-msg { font-size: 20px; color: #aaa; animation: pulse 1s infinite; }
+        
+        @keyframes pulse { 0% { opacity: 0.5; } 50% { opacity: 1; } 100% { opacity: 0.5; } }
+
+        #pause-screen {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.8); display: none;
+            flex-direction: column; justify-content: center; align-items: center;
+            pointer-events: auto; z-index: 101; text-align: center;
+        }
+        #pause-title { color: #f1c40f; font-size: 40px; font-weight: bold; letter-spacing: 2px; margin-bottom: 20px; }
+        #pause-text { color: #eee; font-size: 16px; }
+
+        #messages {
+            position: absolute; top: 25%; width: 100%; text-align: center;
+            font-size: 28px; color: #0ff; font-weight: 800; opacity: 0;
+            transition: opacity 0.3s; text-shadow: 0 2px 10px rgba(0,255,255,0.5);
+            font-style: italic;
+        }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+<body>
+
+<div id="game-container"></div>
+
+<div id="ui-layer">
+    <div id="dist-counter">0.0 KM</div>
+    <div id="top-center-ui">
+        <button class="icon-btn" id="pause-btn">⏸️</button>
+        <button class="icon-btn" id="toggle-dn">🌙</button>
+    </div>
+    <div id="messages"></div>
+    <div id="steer-left"></div>
+    <div id="steer-right"></div>
+
+    <div id="left-controls" class="control-group">
+        <button id="gear-up">SHIFT ▲</button>
+        <button id="gear-down">SHIFT ▼</button>
+        <button class="clutch-btn" id="clutch-btn">CLUTCH</button>
+    </div>
+
+    <div id="right-controls" class="control-group">
+        <div id="throttle-container">
+            <div id="throttle-fill"></div>
+            <div id="throttle-handle"></div>
+            <div id="throttle-label">THROTTLE</div>
+        </div>
+        <button class="brake-btn" id="brake-btn">BRAKE</button>
+    </div>
+
+    <!-- Game Over Screen -->
+    <div id="game-over-screen">
+        <h1>WIPEOUT</h1>
+        <div id="final-score"></div>
+        <div id="restart-msg">TAP ANYWHERE TO RESTART</div>
+    </div>
+
+    <div id="pause-screen">
+        <div id="pause-title">PAUSED</div>
+        <div id="pause-text">Tap to Resume</div>
+    </div>
+</div>
+
+<script>
+/**
+ * BMW S1000RR SIMULATOR V24
+ * - START SCREEN REMOVED. Game launches immediately.
+ * - Physics: Idle creep, top speed boost.
+ * - Env: Biomes, Wide Lanes.
+ */
+
+const state = {
+    playing: false,
+    crashed: false,
+    paused: false,
+    speed: 0,     
+    rpm: 1000,
+    gear: 0, 
+    clutchIn: false,
+    throttle: 0.0,
+    brake: false,
+    lean: 0,      
+    leanVel: 0,   
+    laneOffset: 0,
+    isNight: true,
+    distance: 0,
+    biome: 'meadow', 
+    biomeTimer: 0
+};
+
+const physics = {
+    mass: 270, 
+    dragArea: 0.35,
+    rollingRes: 40, 
+    brakingForce: 12000, 
+    torqueCurve: (rpm) => {
+        if (rpm < 1000) return 20;
+        if (rpm > 14600) return 0; 
+        if (rpm < 4000) return 40 + (rpm-1000)*0.01;
+        if (rpm < 8000) return 70 + (rpm-4000)*0.005; 
+        if (rpm < 12000) return 90 + (rpm-8000)*0.007; 
+        return 135 - (Math.max(0, rpm-14000)*0.01); 
+    },
+    totalRatios: [0, 10.5, 8.2, 6.8, 5.9, 5.3, 4.9] 
+};
+
+const TRAFFIC_TARGET_COUNT = 22; 
+const LANE_POSITIONS = [-10, -3.5, 3.5, 10];
+
+let scene, camera, renderer;
+let dashboardCanvas, dashboardCtx, dashboardTexture;
+let roadMesh, roadMaterial, grassMaterial;
+let traffic = [];
+let scenery = []; 
+let bikeGroup;
+let ambientLight, dirLight, spotLight, spotTarget;
+let lastTime = 0;
+
+let mats = {}; 
+let treeGeo, rockGeo, bushGeo;
+
+function init() {
+    const container = document.getElementById('game-container');
+    
+    scene = new THREE.Scene();
+    camera = new THREE.PerspectiveCamera(80, window.innerWidth / window.innerHeight, 0.1, 2000);
+    camera.position.set(0, 1.30, 0.15); 
+
+    renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); 
+    container.appendChild(renderer.domElement);
+
+    ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+    scene.add(ambientLight);
+    
+    dirLight = new THREE.DirectionalLight(0xffffff, 0.6);
+    dirLight.position.set(30, 100, 20);
+    scene.add(dirLight);
+
+    spotLight = new THREE.SpotLight(0xffffff, 4.0);
+    spotLight.position.set(0, 1.1, 0.5);
+    spotTarget = new THREE.Object3D();
+    spotTarget.position.set(0, 0, -60);
+    scene.add(spotTarget);
+    spotLight.target = spotTarget;
+    spotLight.angle = 0.7;
+    spotLight.penumbra = 0.5;
+    spotLight.distance = 400;
+    scene.add(spotLight);
+
+    initMaterials();
+    buildBike();
+    buildEnvironment();
+    setDayNight(true);
+    
+    // IMMEDIATE START - NO MENU
+    resetGame();
+    animate(0);
+}
+
+function initMaterials() {
+    treeGeo = new THREE.ConeGeometry(4, 18, 7);
+    rockGeo = new THREE.DodecahedronGeometry(2.5, 0);
+    bushGeo = new THREE.IcosahedronGeometry(2, 1);
+
+    mats.meadow = {
+        tree: new THREE.MeshBasicMaterial({ color: 0x052005 }),
+        rock: new THREE.MeshStandardMaterial({ color: 0x444444 }),
+        bush: new THREE.MeshBasicMaterial({ color: 0x1a330a }),
+        ground: 0x051005,
+        fogDay: 0x60a0e0,
+        fogNight: 0x020205
+    };
+    mats.desert = {
+        tree: new THREE.MeshBasicMaterial({ color: 0x554433 }),
+        rock: new THREE.MeshStandardMaterial({ color: 0xaa8855 }),
+        bush: new THREE.MeshBasicMaterial({ color: 0x445522 }),
+        ground: 0x996633,
+        fogDay: 0xffcc99,
+        fogNight: 0x1a1005
+    };
+    mats.snow = {
+        tree: new THREE.MeshBasicMaterial({ color: 0xddddff }),
+        rock: new THREE.MeshStandardMaterial({ color: 0x888899 }),
+        bush: new THREE.MeshBasicMaterial({ color: 0xcccccc }),
+        ground: 0xffffff,
+        fogDay: 0xddeeff,
+        fogNight: 0x050510
+    };
+    mats.autumn = {
+        tree: new THREE.MeshBasicMaterial({ color: 0x883300 }), 
+        rock: new THREE.MeshStandardMaterial({ color: 0x554433 }),
+        bush: new THREE.MeshBasicMaterial({ color: 0xaa6600 }),
+        ground: 0x221100,
+        fogDay: 0xffaa88,
+        fogNight: 0x110500
+    };
+}
+
+function setDayNight(isNight) {
+    state.isNight = isNight;
+    updateBiomeVisuals();
+    document.getElementById('toggle-dn').innerText = isNight ? '🌙' : '☀️';
+}
+
+function updateBiomeVisuals() {
+    const biomeData = mats[state.biome];
+    if(!biomeData) return; 
+
+    const fogColor = state.isNight ? biomeData.fogNight : biomeData.fogDay;
+    scene.background = new THREE.Color(fogColor);
+    scene.fog = new THREE.FogExp2(fogColor, state.isNight ? 0.0025 : 0.0015);
+    
+    ambientLight.intensity = state.isNight ? 0.1 : 0.8;
+    dirLight.intensity = state.isNight ? 0.05 : 0.8;
+    spotLight.visible = state.isNight;
+    roadMaterial.emissive = new THREE.Color(state.isNight ? 0x000000 : 0x000000);
+    
+    if(grassMaterial) {
+        grassMaterial.color.setHex(state.isNight && state.biome !== 'snow' ? 0x050505 : biomeData.ground);
+        if(state.isNight && state.biome !== 'snow') grassMaterial.color.multiplyScalar(0.5);
+    }
+}
+
+function cycleBiome() {
+    const biomes = ['meadow', 'desert', 'snow', 'autumn'];
+    let idx = biomes.indexOf(state.biome);
+    idx = (idx + 1) % biomes.length;
+    state.biome = biomes[idx];
+    updateBiomeVisuals();
+}
+
+document.getElementById('toggle-dn').addEventListener('click', () => setDayNight(!state.isNight));
+
+function togglePause() {
+    if (!state.playing || state.crashed) return; 
+    state.paused = !state.paused;
+    document.getElementById('pause-screen').style.display = state.paused ? 'flex' : 'none';
+}
+document.getElementById('pause-btn').addEventListener('click', togglePause);
+document.getElementById('pause-screen').addEventListener('click', togglePause);
+
+
+function buildBike() {
+    bikeGroup = new THREE.Group();
+    scene.add(bikeGroup);
+
+    const metalMat = new THREE.MeshStandardMaterial({ color: 0x222, metalness: 0.9, roughness: 0.2 });
+    const tankMat = new THREE.MeshStandardMaterial({ color: 0xcc1111, metalness: 0.3, roughness: 0.1 }); 
+    const capMat = new THREE.MeshStandardMaterial({ color: 0x888888, metalness: 0.8, roughness: 0.4 });
+    const keyMat = new THREE.MeshStandardMaterial({ color: 0x111111 });
+
+    const tankGeo = new THREE.SphereGeometry(0.5, 32, 16);
+    tankGeo.scale(0.8, 0.5, 1.2);
+    const tank = new THREE.Mesh(tankGeo, tankMat);
+    tank.position.set(0, 0.85, 0.3);
+    bikeGroup.add(tank);
+
+    const capRing = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 0.01, 16), capMat);
+    capRing.position.set(0, 1.08, 0.4); 
+    capRing.rotation.x = 0.1; 
+    bikeGroup.add(capRing);
+
+    const capInner = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.015, 16), keyMat);
+    capInner.position.set(0, 1.085, 0.4);
+    capInner.rotation.x = 0.1;
+    bikeGroup.add(capInner);
+
+    const clamp = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.05, 0.15), metalMat);
+    clamp.position.set(0, 1.0, -0.3);
+    bikeGroup.add(clamp);
+
+    const forkGeo = new THREE.CylinderGeometry(0.04, 0.04, 0.1, 16);
+    const forkL = new THREE.Mesh(forkGeo, metalMat); forkL.position.set(-0.25, 1.0, -0.3);
+    const forkR = new THREE.Mesh(forkGeo, metalMat); forkR.position.set(0.25, 1.0, -0.3);
+    bikeGroup.add(forkL, forkR);
+
+    const gripMat = new THREE.MeshStandardMaterial({ color: 0x000, roughness: 0.9 });
+    const createBar = (x, rZ, rY) => {
+        const g = new THREE.Group();
+        const rod = new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.022, 0.55), metalMat);
+        rod.rotation.set(0.2, rY, rZ);
+        const grip = new THREE.Mesh(new THREE.CylinderGeometry(0.026, 0.026, 0.15), gripMat);
+        grip.position.set(x > 0 ? 0.18 : -0.18, 0.12, 0);
+        grip.rotation.set(0.2, rY, rZ);
+        g.add(rod, grip);
+        g.position.set(x, 1.0, -0.35);
+        return g;
+    };
+    bikeGroup.add(createBar(-0.25, -1.4, -0.3));
+    bikeGroup.add(createBar(0.25, 1.4, 0.3));
+
+    dashboardCanvas = document.createElement('canvas');
+    dashboardCanvas.width = 512;
+    dashboardCanvas.height = 256;
+    dashboardCtx = dashboardCanvas.getContext('2d');
+    dashboardTexture = new THREE.CanvasTexture(dashboardCanvas);
+    const dash = new THREE.Mesh(
+        new THREE.PlaneGeometry(0.35, 0.18),
+        new THREE.MeshBasicMaterial({ map: dashboardTexture })
+    );
+    dash.position.set(0, 1.05, -0.55);
+    dash.rotation.x = -Math.PI / 5;
+    bikeGroup.add(dash);
+}
+
+function buildEnvironment() {
+    const roadGeo = new THREE.PlaneGeometry(30, 1000);
+    const roadCanvas = document.createElement('canvas');
+    roadCanvas.width = 512;
+    roadCanvas.height = 512;
+    const rctx = roadCanvas.getContext('2d');
+    
+    rctx.fillStyle = "#1a1a1a"; rctx.fillRect(0,0,512,512);
+    rctx.fillStyle = "rgba(255,255,255,0.04)";
+    for(let i=0; i<600; i++) rctx.fillRect(Math.random()*512, Math.random()*512, 2, 2);
+    
+    rctx.fillStyle = "#ccc";
+    [126, 254, 382].forEach(x => { rctx.fillRect(x, 0, 4, 180); rctx.fillRect(x, 256, 4, 180); });
+    rctx.fillStyle = "#FFC107"; 
+    rctx.fillRect(0, 0, 10, 512); rctx.fillRect(502, 0, 10, 512);
+    
+    const roadTex = new THREE.CanvasTexture(roadCanvas);
+    roadTex.wrapS = THREE.RepeatWrapping;
+    roadTex.wrapT = THREE.RepeatWrapping;
+    roadTex.repeat.set(1, 20);
+    roadMaterial = new THREE.MeshStandardMaterial({ map: roadTex, roughness: 0.8 });
+    
+    roadMesh = new THREE.Mesh(roadGeo, roadMaterial);
+    roadMesh.rotation.x = -Math.PI / 2;
+    roadMesh.position.z = -400; 
+    scene.add(roadMesh);
+
+    grassMaterial = new THREE.MeshBasicMaterial({ color: 0x051005 });
+    const ground = new THREE.Mesh(new THREE.PlaneGeometry(800, 1000), grassMaterial);
+    ground.rotation.x = -Math.PI / 2;
+    ground.position.y = -0.1;
+    ground.position.z = -400;
+    scene.add(ground);
+
+    for(let i=0; i<120; i++) spawnSceneryElement(true);
+}
+
+function spawnSceneryElement(initial = false) {
+    const bMat = mats[state.biome];
+    if(!bMat) return;
+
+    const rand = Math.random();
+    let mesh;
+    
+    if(rand < 0.7) {
+        mesh = new THREE.Mesh(treeGeo, bMat.tree);
+        mesh.position.y = 9;
+    } else if(rand < 0.85) {
+        mesh = new THREE.Mesh(rockGeo, bMat.rock);
+        mesh.position.y = 1.5;
+        mesh.rotation.set(Math.random(), Math.random(), Math.random());
+    } else {
+        mesh = new THREE.Mesh(bushGeo, bMat.bush);
+        mesh.position.y = 1;
+    }
+    
+    const z = initial ? -Math.random() * 900 : -900 - (Math.random() * 100);
+    const side = Math.random() > 0.5 ? 1 : -1;
+    const x = side * (25 + Math.random() * 60);
+    mesh.position.z = z;
+    mesh.position.x = x;
+    scene.add(mesh);
+    scenery.push(mesh);
+}
+
+function animate(time) {
+    requestAnimationFrame(animate);
+    const dt = Math.min((time - lastTime) / 1000, 0.05); 
+    lastTime = time;
+
+    if (state.playing && !state.crashed && !state.paused) {
+        updatePhysicsReal(dt); 
+        updateEnvironment(dt); 
+        updateHUD();
+        
+        const targetFov = 80 + (state.speed / 15); 
+        camera.fov += (targetFov - camera.fov) * 3 * dt;
+        camera.updateProjectionMatrix();
+
+        const leanVisual = state.lean;
+        camera.rotation.z = -leanVisual * 0.45;
+        bikeGroup.rotation.z = -leanVisual * 0.45;
+        
+        bikeGroup.position.x = state.laneOffset;
+        camera.position.x = state.laneOffset; 
+
+        spotLight.position.x = state.laneOffset;
+        spotTarget.position.x = state.laneOffset;
+    }
+
+    drawDashboard();
+    renderer.render(scene, camera);
+}
+
+function updatePhysicsReal(dt) {
+    const speedMs = state.speed / 3.6; 
+    const ratio = physics.totalRatios[state.gear];
+    const connected = state.gear > 0 && !state.clutchIn;
+    
+    const rpmFromSpeed = speedMs * 33.6 * ratio;
+
+    let idleAssist = 0;
+    if (connected && state.speed < 21) {
+        idleAssist = 0.6 * (1 - (state.speed / 21.5));
+    }
+
+    const effThrottle = Math.max(state.throttle, idleAssist);
+
+    if (connected) {
+        state.rpm = rpmFromSpeed;
+        if (idleAssist > 0 && state.rpm < 1200) state.rpm = 1200;
+        else if (state.rpm < 1000) state.rpm = 1000; 
+    } else {
+        let rpmTarget = 1000 + (state.throttle * 14000);
+        state.rpm += (rpmTarget - state.rpm) * 5 * dt;
+    }
+    
+    if (state.rpm > 14800) state.rpm = 14800 + (Math.random()*200);
+
+    let driveForce = 0;
+    
+    if (connected) {
+        const engTorque = physics.torqueCurve(state.rpm);
+        const wheelTorque = engTorque * ratio * 0.9; 
+        driveForce = (wheelTorque / 0.3) * effThrottle;
+    }
+
+    const dragForce = 0.24 * (speedMs * speedMs);
+    
+    let netForce = driveForce - dragForce - physics.rollingRes;
+    
+    if (state.brake) {
+        netForce -= physics.brakingForce;
+    } else if (state.throttle === 0 && connected && idleAssist === 0) {
+        netForce -= (state.rpm * 0.2); 
+    }
+
+    const accel = netForce / physics.mass;
+
+    let newSpeedMs = speedMs + (accel * dt);
+    if (newSpeedMs < 0) newSpeedMs = 0;
+    
+    state.speed = newSpeedMs * 3.6;
+    state.distance += (state.speed / 3600) * dt;
+
+    let steerInput = 0;
+    if (activeControls.left) steerInput = -1;
+    if (activeControls.right) steerInput = 1;
+
+    let sensitivity = 5.0 / (1 + (state.speed / 60)); 
+    let targetLean = steerInput; 
+    let leanSmoothing = 5.0; 
+    
+    state.lean += (targetLean - state.lean) * leanSmoothing * dt * sensitivity;
+
+    const lateralSpeed = state.l
