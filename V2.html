@@ -2,21 +2,11 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>S1000RR Simulator V22 - Chrome Fix</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>S1000RR Simulator V23 - The Golden Build</title>
     <style>
-        /* Standard CSS */
-        body { 
-            margin: 0; 
-            overflow: hidden; 
-            background-color: #000; 
-            color: white; 
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
-            user-select: none; 
-            -webkit-user-select: none; 
-            -webkit-tap-highlight-color: transparent;
-            touch-action: none; /* Disables browser handling of gestures */
-        }
+        /* Exact V14/V7 Body CSS */
+        body { margin: 0; overflow: hidden; background-color: #000; color: white; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; user-select: none; -webkit-user-select: none; }
         #game-container { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
         
         #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
@@ -93,29 +83,15 @@
         #steer-left { position: absolute; top: 0; left: 0; width: 40%; height: 70%; pointer-events: auto; }
         #steer-right { position: absolute; top: 0; right: 0; width: 40%; height: 70%; pointer-events: auto; }
 
-        /* Start Screen */
+        /* Exact V7/V14 Start Screen CSS - No complex pointer-events or z-index tricks */
         #start-screen {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(5, 5, 10, 0.95);
             display: flex; flex-direction: column; justify-content: center; align-items: center;
             pointer-events: auto; z-index: 100; text-align: center;
-            touch-action: none;
         }
         h1 { color: #e74c3c; margin: 0 0 15px 0; font-style: italic; text-transform: uppercase; letter-spacing: 3px; font-size: 36px; text-shadow: 0 0 10px #c0392b;}
-        
-        #start-btn-visual { 
-            color: #bbb; 
-            font-size: 20px; 
-            border: 2px solid #555; 
-            padding: 15px 30px; 
-            border-radius: 10px;
-            background: rgba(0,0,0,0.5);
-        }
-        #start-btn-visual:active {
-            background: #e74c3c;
-            color: white;
-            border-color: #fff;
-        }
+        p { color: #bbb; margin: 5px; font-size: 14px; }
         
         #game-over-title { display: none; color: #e74c3c; font-size: 50px; font-weight: bold; text-shadow: 0 0 20px red; margin-bottom: 10px; }
         #final-score { display: none; font-size: 24px; color: #fff; margin-bottom: 20px; font-family: monospace;}
@@ -167,11 +143,12 @@
         <button class="brake-btn" id="brake-btn">BRAKE</button>
     </div>
 
+    <!-- Reverted to V7/V14 HTML Structure -->
     <div id="start-screen">
-        <h1>S1000RR V22</h1>
+        <h1>S1000RR V23</h1>
         <div id="game-over-title">WIPEOUT</div>
         <div id="final-score"></div>
-        <div id="start-btn-visual">TAP TO START</div>
+        <p>Tap screen to Start</p>
     </div>
 
     <div id="pause-screen">
@@ -182,9 +159,11 @@
 
 <script>
 /**
- * BMW S1000RR SIMULATOR V22
- * - Start Screen: Uses touchstart with passive:false to force functionality on Chrome Android.
- * - Previous Features: Biomes, Idle Creep, Red Tank, Steering Fix, Pause.
+ * BMW S1000RR SIMULATOR V23
+ * - Start Screen: EXACT V7 Replica (Click event).
+ * - Physics: Idle creep (2s to 21kmh).
+ * - Env: 4 Biomes (Meadow, Desert, Snow, Autumn).
+ * - Env: Wide Lanes.
  */
 
 const state = {
@@ -217,13 +196,15 @@ const physics = {
         if (rpm < 4000) return 40 + (rpm-1000)*0.01;
         if (rpm < 8000) return 70 + (rpm-4000)*0.005; 
         if (rpm < 12000) return 90 + (rpm-8000)*0.007; 
-        return 130 - (Math.max(0, rpm-13800)*0.01); 
+        // Top end boost
+        return 135 - (Math.max(0, rpm-14000)*0.01); 
     },
     totalRatios: [0, 10.5, 8.2, 6.8, 5.9, 5.3, 4.9] 
 };
 
 const TRAFFIC_TARGET_COUNT = 22; 
-const LANE_POSITIONS = [-10, -3.5, 3.5, 10]; 
+// Wide lanes [-10, -3.5, 3.5, 10]
+const LANE_POSITIONS = [-10, -3.5, 3.5, 10];
 
 let scene, camera, renderer;
 let dashboardCanvas, dashboardCtx, dashboardTexture;
@@ -363,6 +344,7 @@ function buildBike() {
     scene.add(bikeGroup);
 
     const metalMat = new THREE.MeshStandardMaterial({ color: 0x222, metalness: 0.9, roughness: 0.2 });
+    // Red Tank
     const tankMat = new THREE.MeshStandardMaterial({ color: 0xcc1111, metalness: 0.3, roughness: 0.1 }); 
     const capMat = new THREE.MeshStandardMaterial({ color: 0x888888, metalness: 0.8, roughness: 0.4 });
     const keyMat = new THREE.MeshStandardMaterial({ color: 0x111111 });
@@ -373,6 +355,7 @@ function buildBike() {
     tank.position.set(0, 0.85, 0.3);
     bikeGroup.add(tank);
 
+    // Gas Cap
     const capRing = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 0.01, 16), capMat);
     capRing.position.set(0, 1.08, 0.4); 
     capRing.rotation.x = 0.1; 
@@ -522,9 +505,11 @@ function updatePhysicsReal(dt) {
     
     const rpmFromSpeed = speedMs * 33.6 * ratio;
 
+    // IDLE CREEP (2s to 21kmh)
     let idleAssist = 0;
     if (connected && state.speed < 21) {
-        idleAssist = 0.6 * (1 - (state.speed / 21.5));
+        // Stronger assist 
+        idleAssist = 0.8 * (1 - (state.speed / 21.5));
     }
 
     const effThrottle = Math.max(state.throttle, idleAssist);
@@ -553,4 +538,17 @@ function updatePhysicsReal(dt) {
     let netForce = driveForce - dragForce - physics.rollingRes;
     
     if (state.brake) {
-        netForce -= physics.brakin
+        netForce -= physics.brakingForce;
+    } else if (state.throttle === 0 && connected && idleAssist === 0) {
+        netForce -= (state.rpm * 0.2); 
+    }
+
+    const accel = netForce / physics.mass;
+
+    let newSpeedMs = speedMs + (accel * dt);
+    if (newSpeedMs < 0) newSpeedMs = 0;
+    
+    state.speed = newSpeedMs * 3.6;
+    state.distance += (state.speed / 3600) * dt;
+
+    let stee
